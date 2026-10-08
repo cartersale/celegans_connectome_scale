@@ -1,0 +1,8 @@
+/docs
+/figures
+/results
+/data
+microns/
+/archive
+.DS_Store
+__pycache__/
