@@ -1,0 +1,23 @@
+[project]
+name = "conres"
+version = "0.1.0"
+description = "How much can a connectome be coarse-grained before it stops predicting propagation?"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "scikit-learn",
+    "matplotlib",
+    "statsmodels",   # exposure_control.py
+    "networkx",      # fig3_amq.py
+    "openpyxl",      # Witvliet .xlsx files
+    "pyarrow",       # FlyWire and MICrONS .feather files
+]
+
+[project.optional-dependencies]
+virtualworm = ["blender-asset-tracer"]   # first read of the VirtualWorm .blend
+microns = ["h5py", "remfile"]            # microns/scripts/microns_fetch_traces.py
+
+[tool.setuptools.packages.find]
+where = ["src"]
