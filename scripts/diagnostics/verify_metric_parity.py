@@ -17,8 +17,11 @@ Both code paths are run on the same matrix, and the structural loss of the
 cell classes (k = 119, alpha = 0.1) is printed under each pair-selection rule.
 The fly code's masking of non-finite values is not exercised.
 
+The run fails if the two spectral radii, operators or quotients differ by more
+than RHO_TOL (relative), OP_TOL or QUOT_TOL (absolute).
+
 Inputs: conres.celegans, conres.randi, conres.flywire.
-Outputs: printed only.
+Outputs: results/diagnostics/verify_metric_parity.log.
 Usage: python scripts/diagnostics/verify_metric_parity.py
 """
 from __future__ import annotations
@@ -39,6 +42,7 @@ from conres.paths import tee_stdout                   # noqa: E402
 tee_stdout(__file__)
 
 ALPHA = 0.1
+RHO_TOL, OP_TOL, QUOT_TOL = 1e-6, 1e-6, 1e-9
 
 
 def main():
@@ -60,13 +64,17 @@ def main():
     src_all = np.arange(n)
     R_neu = fw.propagation_rows(As, src_all, ALPHA, rho=rho_dense)
     off = ~np.eye(n, dtype=bool)
-    print(f"[3] operator  max abs diff {np.abs(R_dense - R_neu)[off].max():.3e}   "
+    op_diff = np.abs(R_dense - R_neu)[off].max()
+    print(f"[3] operator  max abs diff {op_diff:.3e}   "
           f"Spearman {stats.spearmanr(R_dense[off], R_neu[off]).statistic:.8f}")
+    assert abs(rho_dense - rho_power) / rho_dense < RHO_TOL, "spectral radii disagree"
+    assert op_diff < OP_TOL, "truncated series departs from the exact inverse"
 
     # ---- quotient definitions
     Qd = randi.quotient(A, labels)
     Qs = fw.quotient(As, labels).toarray()
     print(f"[q] quotient  max abs diff {np.abs(Qd - Qs).max():.3e}")
+    assert np.abs(Qd - Qs).max() < QUOT_TOL, "quotient definitions disagree"
 
     # ---- loss under each pair-selection rule
     RQ = randi.resolvent(Qd, ALPHA)
@@ -79,7 +87,7 @@ def main():
     offj, offi = aj[off], ai[off]
     print(f"\n[1/2] loss at k=119 under different pair-selection rules")
     print(f"   all ordered pairs, self excluded  (n={len(offj):,})      "
-          f"{loss(offj, offi):.4f}   <- worm figure used this family")
+          f"{loss(offj, offi):.4f}   <- pair set of the worm structural loss")
     dj, di = np.diag_indices(n)
     allj, alli = aj.ravel(), ai.ravel()
     print(f"   all ordered pairs, self INCLUDED  (n={len(allj):,})      "

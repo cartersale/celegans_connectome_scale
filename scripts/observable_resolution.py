@@ -6,7 +6,7 @@ Observables (i responds, j stimulated):
 
   incidence     does j -> i respond; AUC on the occ3-observed ordered pairs
   correlation   mean across-animal Pearson r on unordered pairs co-identified in
-                >= 3 animals (from `two_observables.setup`); predictor
+                >= 3 animals (from `conres.observables.pair_sets`); predictor
                 S_ji + S_ij, Spearman
   amplitude     |mean stimulus-triggered z| of i after stimulation of j, on the
                 occ3 pairs with >= --min-events events; Spearman
@@ -52,7 +52,6 @@ Usage:   python scripts/observable_resolution.py [--n-bio 10] [--n-rand 10]
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 import warnings
 from pathlib import Path
@@ -66,63 +65,15 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from conres import celegans as ce, randi                     # noqa: E402
+from conres import randi                                     # noqa: E402
 from conres.metric_guard import guard_predictor              # noqa: E402
-from two_observables import setup as setup_corr         # noqa: E402
+from conres.observables import (pair_sets as setup_corr,      # noqa: E402
+                                build_sta, PRE, POST, WIN)
 from complexity_curve import bio_path                  # noqa: E402
 
 ALPHA = 0.1
-PRE, POST, WIN = 10, 60, (2, 40)
 K_GRID = (302, 290, 275, 260, 242, 220, 200, 182, 160, 140, 119, 100, 80, 60, 40, 30, 20)
 OBS = ("incidence", "correlation", "amplitude", "magnitude", "latency")
-CACHE = ROOT / "results/sta_cache.npz"
-
-
-def build_sta(nodes: list[str]) -> tuple[np.ndarray, np.ndarray]:
-    """Per ordered pair (i responds, j stimulated): summed z-trace and event count."""
-    if CACHE.exists():
-        z = np.load(CACHE)
-        if list(z["nodes"]) == list(nodes):
-            return z["acc"], z["cnt"]
-    folder = randi.EXPORTED / "exported_data"
-    valid = {x: k for k, x in enumerate(nodes)}
-    n = len(nodes)
-    L = PRE + POST + 1
-    acc = np.zeros((n, n, L), np.float32)
-    cnt = np.zeros((n, n))
-    for f in sorted(folder.glob("*_labels.txt")):
-        r = int(re.match(r"(\d+)_labels", f.name).group(1))
-        labels = [ce.normalise_name(x.rstrip("\n").strip()) for x in f.open()]
-        sv, sn = folder / f"{r}_stim_volume_i.txt", folder / f"{r}_stim_neurons.txt"
-        if not (sv.exists() and sn.exists()):
-            continue
-        G = randi._gcamp(folder, r)
-        if G.shape[0] < 100:
-            continue
-        alive = np.isfinite(G).all(axis=0)
-        cols = [(c, valid[x]) for c, x in enumerate(labels)
-                if x in valid and c < G.shape[1] and alive[c]]
-        if len(cols) < 2:
-            continue
-        ci = np.array([c for c, _ in cols])
-        ni = np.array([k for _, k in cols])
-        X = G[:, ci]
-        sd = np.maximum(X.std(0), 1e-9)
-        stims = [int(x) for x in sv.open() if x.strip()]
-        sneu = [int(x) for x in sn.open() if x.strip()]
-        for s, c in zip(stims, sneu):
-            if not (0 <= c < len(labels)) or labels[c] not in valid:
-                continue
-            if s - PRE < 0 or s + POST >= X.shape[0]:
-                continue
-            j = valid[labels[c]]
-            seg = X[s - PRE:s + POST + 1]
-            z = (seg - seg[:PRE].mean(0)) / sd
-            keep = ni != j
-            acc[ni[keep], j] += z[:, keep].T
-            cnt[ni[keep], j] += 1
-    np.savez_compressed(CACHE, acc=acc, cnt=cnt, nodes=np.array(nodes))
-    return acc, cnt
 
 
 def walk_length(M: np.ndarray, lmax: int = 6) -> np.ndarray:

@@ -16,9 +16,8 @@ and Delta = L_random - L_partition, with L_random the mean over --n-rand label
 permutations. struct_occ is on the same pairs as the AUCs; struct_all is on the
 pair set used for the fly and is not to be set beside the AUC. A^1 is mostly
 exact zeros, so Spearman on it has a dominant tie block; the largest tie block
-of each full operator is printed, and the tie-free cosine loss is carried so
-that a step between A^1 and A^2 seen only in the rank loss can be recognised as
-a tie artefact.
+of each full operator is printed, and the cosine loss, which is unaffected by
+ties, is reported alongside the rank loss.
 
 Partitions: cell classes, and bilateral homologue pairs (lineage-defined,
 independent of wiring). Intervals on Delta and on the step in Delta between
@@ -31,8 +30,8 @@ and observation counts (conres.randi).
 Outputs: results/path_length_quotient.csv (partition, operator, metric,
 bio, rand_mean, rand_sd, delta, z, headroom) and
 results/path_length_bootstrap.csv (95% intervals per contrast).
-Usage: path_length_quotient.py [--n-rand 200] [--n-boot 200]
-       [--n-rand-boot 20] [--seed 0]
+Usage: path_length_quotient.py [--n-rand 200] [--n-boot 500]
+       [--n-rand-boot 50] [--seed 0]
 """
 from __future__ import annotations
 
@@ -84,8 +83,8 @@ def cosine(x: np.ndarray, y: np.ndarray) -> float:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n-rand", type=int, default=200)
-    ap.add_argument("--n-boot", type=int, default=200)
-    ap.add_argument("--n-rand-boot", type=int, default=20,
+    ap.add_argument("--n-boot", type=int, default=500)
+    ap.add_argument("--n-rand-boot", type=int, default=50,
                     help="nulls re-scored inside each bootstrap resample")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()

@@ -13,13 +13,13 @@
 Scores are performance above chance (AUC - 0.5, or Spearman rho), so a loss is
 a fraction of each observable's own headroom.
 
-The pair sets are built by `setup` in scripts/two_observables.py and the
-stimulus-triggered averages by `build_sta` in
-scripts/observable_resolution.py, which are imported at call time.
+`pair_sets` builds the incidence and correlation pair sets, and `build_sta` the
+stimulus-triggered averages behind amplitude and latency (cached in
+results/sta_cache.npz).
 """
 from __future__ import annotations
 
-import sys
+import re
 
 import numpy as np
 from scipy import stats
@@ -31,14 +31,108 @@ from conres.paths import REPO_ROOT
 OBSERVABLES = ("incidence_all", "incidence_nosyn", "correlation", "amplitude", "magnitude")
 POWERED = ("incidence_all", "correlation")    # narrowest intervals; they resolve boundaries
 
+# stimulus-triggered averages: volumes kept before and after onset (2 Hz), and
+# the response window [WIN[0], WIN[1]) in volumes after onset
+PRE, POST, WIN = 10, 60, (2, 40)
+STA_CACHE = REPO_ROOT / "results/sta_cache.npz"
+
+
+def pair_sets(min_animals: int, excise: int, detrend: bool) -> dict:
+    """Incidence and correlation pair sets on the Cook node set (Randi 2023 wild type).
+
+    Incidence: ordered pairs (ii responds, jj stimulated) with occ3 > 0, label
+    `y` = 1 for a detected response, `direct` = A[jj, ii]. Correlation:
+    unordered pairs (iu, ju) co-identified in >= `min_animals` recordings, with
+    mean within-recording Pearson `r` and recording count `n_animals`; `excise`
+    and `detrend` are passed to randi.build_correlations. `common` and
+    `dcommon` mark, in each set, the pairs present in both.
+    """
+    A, nodes = ce.build_matrix("all", neurons_only=True)
+    labels = ce.partitions(nodes)["class"]
+    n = len(nodes)
+
+    occ3, _ = randi.build_occ3(nodes, "wt")
+    idx = {m: i for i, m in enumerate(nodes)}
+    d = randi.load_responses("wildty")
+    d = d[d.pre.isin(idx) & d.post.isin(idx)]
+    hits = {(idx[p], idx[q]) for p, q in zip(d.pre, d.post)}
+    ii, jj = np.nonzero(occ3)                       # i responds, j stimulated
+    y = np.array([1.0 if (j, i) in hits else 0.0 for i, j in zip(ii, jj)])
+
+    R, cnt = randi.build_correlations(nodes, "wt", excise=excise, detrend=detrend)
+    iu, ju = np.triu_indices(n, 1)
+    keep = (cnt[iu, ju] >= min_animals) & np.isfinite(R[iu, ju])
+    iu, ju = iu[keep], ju[keep]
+    r = R[iu, ju]
+
+    # unordered pairs present in both observables, indexed both ways
+    und = {(min(a, b), max(a, b)) for a, b in zip(ii, jj)}
+    common = np.array([(a, b) in und for a, b in zip(iu, ju)])
+    cset = {(a, b) for a, b, k in zip(iu, ju, common) if k}
+    dcommon = np.array([(min(a, b), max(a, b)) in cset for a, b in zip(ii, jj)])
+    return dict(A=A, nodes=nodes, labels=labels, ii=ii, jj=jj, y=y,
+                iu=iu, ju=ju, r=r, common=common, dcommon=dcommon,
+                direct=A[jj, ii], n_animals=cnt[iu, ju])
+
+
+def build_sta(nodes: list[str]) -> tuple[np.ndarray, np.ndarray]:
+    """Per ordered pair (i responds, j stimulated): summed z-trace and event count.
+
+    For each stimulation the responder's trace from PRE volumes before to POST
+    after onset is baseline-subtracted by its pre-stimulus mean and divided by
+    that neuron's whole-recording SD. Recordings shorter than 100 volumes,
+    traces with any non-finite sample and events without a full window are
+    skipped. Returns (acc, cnt): acc[i, j] is the summed trace (length
+    PRE + POST + 1) and cnt[i, j] the number of events. The result is cached
+    in STA_CACHE and reused when the node list matches.
+    """
+    if STA_CACHE.exists():
+        z = np.load(STA_CACHE)
+        if list(z["nodes"]) == list(nodes):
+            return z["acc"], z["cnt"]
+    folder = randi.EXPORTED / "exported_data"
+    valid = {x: k for k, x in enumerate(nodes)}
+    n = len(nodes)
+    L = PRE + POST + 1
+    acc = np.zeros((n, n, L), np.float32)
+    cnt = np.zeros((n, n))
+    for f in sorted(folder.glob("*_labels.txt")):
+        r = int(re.match(r"(\d+)_labels", f.name).group(1))
+        labels = [ce.normalise_name(x.rstrip("\n").strip()) for x in f.open()]
+        sv, sn = folder / f"{r}_stim_volume_i.txt", folder / f"{r}_stim_neurons.txt"
+        if not (sv.exists() and sn.exists()):
+            continue
+        G = randi._gcamp(folder, r)
+        if G.shape[0] < 100:
+            continue
+        alive = np.isfinite(G).all(axis=0)
+        cols = [(c, valid[x]) for c, x in enumerate(labels)
+                if x in valid and c < G.shape[1] and alive[c]]
+        if len(cols) < 2:
+            continue
+        ci = np.array([c for c, _ in cols])
+        ni = np.array([k for _, k in cols])
+        X = G[:, ci]
+        sd = np.maximum(X.std(0), 1e-9)
+        stims = [int(x) for x in sv.open() if x.strip()]
+        sneu = [int(x) for x in sn.open() if x.strip()]
+        for s, c in zip(stims, sneu):
+            if not (0 <= c < len(labels)) or labels[c] not in valid:
+                continue
+            if s - PRE < 0 or s + POST >= X.shape[0]:
+                continue
+            j = valid[labels[c]]
+            seg = X[s - PRE:s + POST + 1]
+            z = (seg - seg[:PRE].mean(0)) / sd
+            keep = ni != j
+            acc[ni[keep], j] += z[:, keep].T
+            cnt[ni[keep], j] += 1
+    np.savez_compressed(STA_CACHE, acc=acc, cnt=cnt, nodes=np.array(nodes))
+    return acc, cnt
 
 def load(min_animals: int = 3, min_events: int = 2) -> dict:
     """Dict with Cook adjacency `A`, `nodes`, class codes `cls` and observables `obs`."""
-    sys.path.insert(0, str(REPO_ROOT / "scripts"))
-    from two_observables import setup as setup_corr          # noqa: E402
-    from observable_resolution import build_sta, PRE, WIN   # noqa: E402
-
-    dat = setup_corr(min_animals, 0, False)
+    dat = pair_sets(min_animals, 0, False)
     A, nodes = dat["A"], dat["nodes"]
     idx = {x: i for i, x in enumerate(nodes)}
     ii, jj, y = dat["ii"], dat["jj"], dat["y"]

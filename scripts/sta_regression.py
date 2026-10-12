@@ -11,7 +11,7 @@ TPL, the template is subtracted twice in the overlap.
 
 Arms, each scored by Spearman of S[i,j] + S[j,i] against the mean correlation of
 pairs co-identified in >= 3 recordings: the full resolvent (alpha = 0.1), the
-lifted class-level resolvent, and 100 size-matched random partitions
+lifted class-level resolvent, and N_NULL size-matched random partitions
 (two_observables.size_matched, seed 0). Run on the unaltered traces
 ("baseline (all frames)") and on the STA-regressed traces.
 
@@ -29,7 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from conres import celegans as ce, randi
 from two_observables import size_matched
-ALPHA=0.1; TPL=68     # template length = mean inter-stimulus interval
+ALPHA=0.1; N_NULL=200
+TPL=68     # template length = mean inter-stimulus interval
 
 def correlations_stareg(nodes, remove=True):
     folder=randi.EXPORTED/"exported_data"; valid={n:k for k,n in enumerate(nodes)}
@@ -77,7 +78,7 @@ def arm(R,cnt,tag):
     rho=lambda M: stats.spearmanr(M[a,b]+M[b,a],r).statistic
     full=rho(S); bio=rho(Q); rng=np.random.default_rng(0)
     rnd=np.array([rho(randi.resolvent(randi.quotient(A,rl),ALPHA)[np.ix_(rl,rl)])
-                  for rl in (size_matched(lab,rng) for _ in range(100))])
+                  for rl in (size_matched(lab,rng) for _ in range(N_NULL))])
     ROWS.append(dict(arm=tag.strip(), pairs=int(keep.sum()), full=full, bio=bio,
                      random=rnd.mean(), random_sd=rnd.std(),
                      bio_frac=(full-bio)/full, random_frac=(full-rnd.mean())/full,

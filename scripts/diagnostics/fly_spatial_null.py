@@ -13,8 +13,7 @@ operator, alpha = 0.1, full-connectome rho) on 200 out-degree-stratified
 sources x 400 targets (seed 0). Printed "% of gap that is geometry" is
 (random - spatial) / (random - bio).
 
-The k = 726 (f = 0.02) row of the output is a hard-coded constant, not computed
-by this script; the computed rungs are f = 0.05, 0.10, 0.20, 0.40 by default.
+The rungs are f = 0.02, 0.05, 0.10, 0.20, 0.40 by default.
 
 Inputs: conres.flywire, fly_fragility (pair_sample, rung_loss).
 Outputs: results/fly_spatial_null.csv (k, compression, bio, spatial_null, random).
@@ -57,7 +56,7 @@ def spatial_labels(meta, k, seed=0):
 
 
 def main():
-    fs = [float(x) for x in sys.argv[1:]] or [0.05, 0.10, 0.20, 0.40]
+    fs = [float(x) for x in sys.argv[1:]] or [0.02, 0.05, 0.10, 0.20, 0.40]
     meta = fw.load_scope()
     A = fw.load_adjacency(meta)
     n = A.shape[0]
@@ -68,11 +67,10 @@ def main():
     full_rows = fw.propagation_rows(A, sources, ALPHA, rho=rho)
     full_vals = np.stack([full_rows[r][tgt[r]] for r in range(len(sources))]).ravel()
     print(f"in-scope {n:,} neurons, rho={rho:.0f}, {len(sources)} sources, "
-          f"{len(full_vals):,} pairs  (resuming after k=726)\n")
+          f"{len(full_vals):,} pairs\n")
     print(f"{'k':>7} {'compr':>7} {'bio (Ward/lineage)':>20} {'spatial null':>14} "
           f"{'size-matched random':>20} {'% of gap that is geometry':>27}")
-    rows = [{"k": 726, "compression": 44.52, "bio": 0.4829,
-             "spatial_null": 0.7168, "random": 0.9820}]
+    rows = []
     for f in fs:
         lab = fw.subsplit(meta, f)
         k = int(lab.max() + 1)
@@ -89,8 +87,7 @@ def main():
     with out.open("w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
     print(f"\nwrote {out}")
-    print("  geometry column = how much of the biology-vs-arbitrary-random gap is")
-    print("  already delivered by spatial compactness alone, with no lineage information")
+    print("  last column = (random - spatial null) / (random - bio)")
 
 
 if __name__ == "__main__":

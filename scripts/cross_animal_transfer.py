@@ -32,8 +32,9 @@ column-centred transfer loss against developmental-stage distance.
 Inputs: Witvliet 2021 connectomes (conres.celegans.witvliet_files/_matrix);
 imports prospective_merges.
 Outputs: results/cross_animal_transfer_m<n_merge>.csv with rows
-(kind, train, test, value): kind "loss" for the 8x8 matrix, and within,
-transfer, biological, random, retention per test animal. The re-paired and
+(kind, train, test, value): kind "loss" for the 8x8 matrix, "jaccard" for the
+merge-set overlap of each animal pair, and within, transfer, biological,
+random, retention per test animal. The re-paired and
 degree_matched_bio results go to stdout only.
 Usage: cross_animal_transfer.py [--n-merge 30] [--n-null 50] [--seed 0] [--exclude-glia]
 """
@@ -254,6 +255,9 @@ def main():
             for k, v in (("within", wi), ("transfer", tr), ("biological", bi),
                          ("random", ra), ("retention", re)):
                 w.writerow([k, "", st, f"{v:.6f}"])
+        pairs = [(a, b) for a in range(8) for b in range(a + 1, 8)]
+        for (a, b), v in zip(pairs, jac):
+            w.writerow(["jaccard", stages[a], stages[b], f"{v:.6f}"])
     print(f"\nwrote {out}")
 
 

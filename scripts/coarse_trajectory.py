@@ -50,7 +50,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from conres import randi                                            # noqa: E402
 from conres.metric_guard import guard_predictor                     # noqa: E402
-from observable_resolution import build_sta, setup_corr, PRE, WIN  # noqa: E402
+from conres.observables import (pair_sets as setup_corr,            # noqa: E402
+                                build_sta, PRE, WIN)
 
 ALPHA = 0.1
 

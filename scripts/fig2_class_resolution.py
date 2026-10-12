@@ -18,13 +18,14 @@ scales and the AUC scoring is rank-based.
 Bottom row, from saved sweeps:
 
 d  propagation effect retained along the matched class and random merge
-   trajectories, 302 -> 119, as % of HEADROOM (mean and 2.5-97.5 percentile band)
+   trajectories, 302 -> 119, as % of the headroom (mean and 2.5-97.5 percentile band)
 e  at k = 119, operator-structure loss and propagation-prediction loss per arm
 f  at k = 119, loss for propagation and for activity correlation per arm
 
 Operator: (I - alpha*A/rho)^-1 - I with alpha = 0.1 (randi.resolvent). The
-class quotient is randi.quotient on the 119 cell classes. HEADROOM is the full
-operator's no-synapse AUC above 0.5, hard-coded rather than recomputed.
+class quotient is randi.quotient on the 119 cell classes. The headroom is the
+full operator's AUC above 0.5 on observed pairs with no synapse from stimulated
+to responder (pair set from class_merge_structural_loss.setup).
 
 Inputs: connectome via conres.celegans; soma positions via conres.worm.soma_ap;
     layout and bundling helpers from circle_layout;
@@ -44,6 +45,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch
 import pandas as pd
 from scipy.stats import spearmanr
+from sklearn.metrics import roc_auc_score
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -53,6 +55,7 @@ from conres.worm import soma_ap                                     # noqa: E402
 from circle_layout import (TYPES, TYPE_COL, R_CLASS, R_TYPE,        # noqa: E402
                            neuron_type, layout, polar, mean_angle,
                            bundled, hierarchy_path)
+from class_merge_structural_loss import setup as merge_setup        # noqa: E402
 
 OUT = ROOT / "figures/fig2"
 
@@ -60,7 +63,6 @@ ALPHA = 0.1          # same discounting as the fragility sweep
 N_ROUTE = 70         # chords drawn
 K_BEND = 0.30        # chord control-point radius; 0 is a straight line
 N_ARROW = 12         # strongest routes that get an arrowhead
-HEADROOM = 0.1026    # the full operator's AUC above chance on no-synapse pairs
 FS = 5.9
 DPI = 600            # resolution of the rasterized wiring layers
 BIO, RND = fs.CLASS, fs.GREY
@@ -212,10 +214,10 @@ def band(d, col, scale=1.0):
     return g.mean(), g.quantile(0.025), g.quantile(0.975)
 
 
-def panel_d(ax, bm):
+def panel_d(ax, bm, headroom):
     """Predictive headroom retained along the two matched merge trajectories."""
     for mode, c, lbl in (("random", RND, "Random merges"), ("bio", BIO, "Classes")):
-        m, lo, hi = band(bm[bm["mode"] == mode], "loss_auc_nosyn", -100 / HEADROOM)
+        m, lo, hi = band(bm[bm["mode"] == mode], "loss_auc_nosyn", -100 / headroom)
         m, lo, hi = m + 100, lo + 100, hi + 100
         ax.fill_between(m.index, lo, hi, color=c, alpha=0.18, lw=0)
         ax.plot(m.index, m, color=c, lw=1.2, label=lbl)
@@ -233,14 +235,14 @@ def panel_d(ax, bm):
     fs.style(ax)
 
 
-def panel_e(ax, bm):
+def panel_e(ax, bm, headroom):
     """At k = 119: what each arm costs in operator structure, and in prediction."""
     end = bm[bm.k == 119]
     vals, errs = {}, {}
     for mode in ("bio", "random"):
         d = end[end["mode"] == mode]
-        vals[mode] = [100 * d.loss_struct_occ.mean(), 100 * d.loss_auc_nosyn.mean() / HEADROOM]
-        errs[mode] = [100 * d.loss_struct_occ.std(), 100 * d.loss_auc_nosyn.std() / HEADROOM]
+        vals[mode] = [100 * d.loss_struct_occ.mean(), 100 * d.loss_auc_nosyn.mean() / headroom]
+        errs[mode] = [100 * d.loss_struct_occ.std(), 100 * d.loss_auc_nosyn.std() / headroom]
     x = np.arange(2)
     for k, (mode, c) in enumerate((("bio", BIO), ("random", RND))):
         xx = x + (k - 0.5) * 0.36
@@ -362,7 +364,11 @@ def main() -> None:
 
     bm = pd.read_csv(ROOT / "results/class_merge_structural_loss.csv")
     ob = pd.read_csv(ROOT / "results/two_observable_trajectory.csv")
-    end = bm[bm.k == 119].groupby("mode")["loss_auc_nosyn"].mean() / HEADROOM
+    _, _, _, oj, oi, y, _, _ = merge_setup()
+    sub = A[oj, oi] == 0
+    headroom = roc_auc_score(y[sub], R_full[oj, oi][sub]) - 0.5
+    print(f"full operator AUC above chance on no-synapse pairs: {headroom:.4f}")
+    end = bm[bm.k == 119].groupby("mode")["loss_auc_nosyn"].mean() / headroom
     lost_bio, lost_rnd = max(0.0, 100 * end["bio"]), 100 * end["random"]
     st = 100 * bm[bm.k == 119].groupby("mode")["loss_struct_occ"].mean()
     print(f"k=119  effect lost: classes {lost_bio:.0f}%, random {lost_rnd:.0f}%; "
@@ -406,7 +412,7 @@ def main() -> None:
             [nodes[i] for i in members[big]], TYPE_COL[ctype[big]],
             polar(np.array([theta_c[big]]), NODE_R)[0])
 
-    # -- c: the prediction survives ----------------------------------------
+    # -- c: the same routes under the class-level operator -------------------
     draw_routes(axc, xy_n, pairs, e_full, ntype, grey=True)
     draw_routes(axc, xy_n, pairs, e_cls, ntype, arrows=N_ARROW)
     rim(axc, theta_n, ntype, 2.6)
@@ -422,8 +428,8 @@ def main() -> None:
         axc.plot([-1.32, -1.18], [y, y], color=col, lw=lw, solid_capstyle="round")
         axc.text(-1.14, y, txt, fontsize=5.6, color=tc, va="center")
 
-    panel_d(axd, bm)
-    panel_e(axe, bm)
+    panel_d(axd, bm, headroom)
+    panel_e(axe, bm, headroom)
     panel_f(axf, ob)
     for ax, letter in zip((axd, axe, axf), "def"):
         ax.text(-0.22, 1.14, letter, transform=ax.transAxes, fontsize=8,

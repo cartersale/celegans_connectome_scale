@@ -46,7 +46,8 @@ from sklearn.metrics import roc_auc_score
 warnings.filterwarnings("ignore")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from conres import celegans as ce, randi          # noqa: E402
+from conres import randi                           # noqa: E402
+from conres.observables import pair_sets as setup   # noqa: E402
 from conres.metric_guard import guard_predictor    # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,35 +64,6 @@ def size_matched(labels: np.ndarray, rng) -> np.ndarray:
         out[perm[p:p + s]] = c
         p += s
     return out
-
-
-def setup(min_animals: int, excise: int, detrend: bool):
-    A, nodes = ce.build_matrix("all", neurons_only=True)
-    labels = ce.partitions(nodes)["class"]
-    n = len(nodes)
-
-    occ3, _ = randi.build_occ3(nodes, "wt")
-    idx = {m: i for i, m in enumerate(nodes)}
-    d = randi.load_responses("wildty")
-    d = d[d.pre.isin(idx) & d.post.isin(idx)]
-    hits = {(idx[p], idx[q]) for p, q in zip(d.pre, d.post)}
-    ii, jj = np.nonzero(occ3)                       # i responds, j stimulated
-    y = np.array([1.0 if (j, i) in hits else 0.0 for i, j in zip(ii, jj)])
-
-    R, cnt = randi.build_correlations(nodes, "wt", excise=excise, detrend=detrend)
-    iu, ju = np.triu_indices(n, 1)
-    keep = (cnt[iu, ju] >= min_animals) & np.isfinite(R[iu, ju])
-    iu, ju = iu[keep], ju[keep]
-    r = R[iu, ju]
-
-    # unordered pairs present in both observables, indexed both ways
-    und = {(min(a, b), max(a, b)) for a, b in zip(ii, jj)}
-    common = np.array([(a, b) in und for a, b in zip(iu, ju)])
-    cset = {(a, b) for a, b, k in zip(iu, ju, common) if k}
-    dcommon = np.array([(min(a, b), max(a, b)) in cset for a, b in zip(ii, jj)])
-    return dict(A=A, nodes=nodes, labels=labels, ii=ii, jj=jj, y=y,
-                iu=iu, ju=ju, r=r, common=common, dcommon=dcommon,
-                direct=A[jj, ii], n_animals=cnt[iu, ju])
 
 
 def scores(S, dat, mask_d=None, mask_c=None):

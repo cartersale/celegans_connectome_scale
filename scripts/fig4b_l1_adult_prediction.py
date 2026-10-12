@@ -19,11 +19,12 @@ pairs, alpha = 0.1):
 
 Uses infer from functional_transfer.py with the same seeds and draw
 order, keeping every draw. As a consistency check, each arm mean must match
-EXPECTED (the functional_transfer.py --pool all --n-merge 70 values) to
-within 0.15 percentage points, or the script exits.
+the corresponding arm of results/functional_transfer_all_m70.csv
+(functional_transfer.py --pool all --n-merge 70) to within 0.15 percentage
+points, or the script exits.
 
 Inputs: Cook 2019 adjacency, Witvliet 2021 datasets (conres.celegans), Randi
-2023 responses (conres.randi).
+2023 responses (conres.randi), results/functional_transfer_all_m70.csv.
 Outputs: results/fig4b_l1_adult_prediction.csv (arm, loss_pct, one row per
 partition), figures/fig4/fig4b_l1_adult_prediction.svg.
 """
@@ -53,7 +54,10 @@ OUT = ROOT / "figures/fig4"
 ALPHA, M, SEED, N_NULL = 0.1, 70, 0, 50
 BIO, TRANS, INK, RAND = "#2e9e52", "#2a5fd6", "#22282d", "#8b9196"
 FS = 6.5
-EXPECTED = {"adult": 2.4, "L1": 7.4, "thinned": 7.1, "random": 21.6, "classes": -1.0}
+REFERENCE = ROOT / "results/functional_transfer_all_m70.csv"
+# arm here -> arms of functional_transfer.py averaged
+REF_ARMS = {"adult": ["cook"], "L1": ["1L", "2L", "3L", "4L"], "thinned": ["cook_thinned"],
+            "random": ["random"], "classes": ["biological"]}
 
 
 def main() -> None:
@@ -127,7 +131,9 @@ def main() -> None:
 
     for k, v in vals.items():
         print(f"{k:>8}: mean {np.mean(v):+.2f}%  (n={len(v)}, range {np.min(v):+.1f} to {np.max(v):+.1f})")
-    bad = {k: np.mean(v) for k, v in vals.items() if abs(np.mean(v) - EXPECTED[k]) > 0.15}
+    ref = pd.read_csv(REFERENCE).set_index("arm").auc
+    expected = {k: 100 * (auc0 - ref[a].mean()) / (auc0 - 0.5) for k, a in REF_ARMS.items()}
+    bad = {k: np.mean(v) for k, v in vals.items() if abs(np.mean(v) - expected[k]) > 0.15}
     if bad:
         raise SystemExit(f"does not reproduce functional_transfer.py: {bad}")
     print("L1 animals: " + "  ".join(f"{s} {per_stage[s]:.1f}%" for s in stages[:4]))

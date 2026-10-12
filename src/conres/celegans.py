@@ -169,6 +169,21 @@ def build_matrix(kind: str = "chemical", *, neurons_only: bool = True
     return A, nodes
 
 
+def layer_matrix(nodes: list[str], kind: str) -> np.ndarray:
+    """Adjacency of one contact type ('chemical' or 'electrical') on a given node list.
+
+    Entries are summed as listed, with no symmetrisation, so the chemical and
+    electrical layers on the build_matrix('all') node list add up to that matrix.
+    """
+    idx = {n: i for i, n in enumerate(nodes)}
+    A = np.zeros((len(nodes), len(nodes)))
+    e = load_edges(kind)
+    for s, t, w in zip(e.Source, e.Target, e.Weight):
+        if s in idx and t in idx:
+            A[idx[s], idx[t]] += w
+    return A
+
+
 def partitions(nodes: list[str]) -> dict[str, np.ndarray]:
     """Integer label vectors over `nodes`: 'class' (assign_classes) and 'bilateral'."""
     out: dict[str, np.ndarray] = {}

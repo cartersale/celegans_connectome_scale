@@ -1,4 +1,4 @@
-"""Cross-check of the Randi 2023 inputs and the headline signal-propagation AUCs
+"""Cross-check of the Randi 2023 inputs and the signal-propagation AUCs
 against the Randi lab's wormneuroatlas package.
 
 This project reaches the Randi measurements through src/conres/randi.py (our
@@ -20,8 +20,8 @@ Cook 2019 far better transposed). Their connectome is
 transposed here into our [pre, post] order; their occurrence and q matrices are
 read as [responder, stimulus], the same convention as occ3.
 
-The first table row ("ours") and the closing sentence of the report are fixed
-text in this script, not recomputed.
+The first table row ("ours") is recomputed from the released responses, occ3 and
+Cook 2019.
 
 Generating the dump: wormneuroatlas needs h5py, which has no working numpy ABI
 in the project environment, so it runs in a separate venv:
@@ -102,11 +102,9 @@ def main() -> None:
               f"- edges theirs {int(b1.sum()):,}, ours {int(b2.sum()):,}, "
               f"Jaccard **{np.logical_and(b1,b2).sum()/np.logical_or(b1,b2).sum():.3f}**",
               f"- weight Spearman on shared edges rho = "
-              f"{stats.spearmanr(At[b1&b2], Ao[b1&b2]).statistic:.3f}",
-              "- so these are genuinely different reconstructions, not two loaders of "
-              "one file. Anything that survives both is not an artefact of either.\n"]
+              f"{stats.spearmanr(At[b1&b2], Ao[b1&b2]).statistic:.3f}\n"]
 
-    # ---- the headline, recomputed on their responses
+    # ---- AUCs recomputed on their responses
     occ, q = z["occ"], z["q"]
     obs = occ > 0
     resp = np.isfinite(q) & (q < QTHRESH) & obs
@@ -118,27 +116,38 @@ def main() -> None:
     sel = np.flatnonzero([r is not None for r in row])
     Acook[np.ix_(sel, sel)] = A[np.ix_([row[k] for k in sel], [row[k] for k in sel])]
 
-    lines += [f"## Does the result survive their pipeline?",
+    lines += [f"## AUCs under each connectome and response call",
               f"Their detection is q < {QTHRESH} from their own kernel fits, over "
               f"{int(obs.sum()):,} observed pairs and {int(resp.sum()):,} responses "
               f"({100*resp.sum()/obs.sum():.2f}%). Walk operator is the resolvent at "
               f"alpha = {ALPHA}.\n",
               "| connectome | responses | direct weight | walk operator | walk, no-synapse |",
               "|---|---|---|---|---|"]
-    rows = [("Cook 2019", "ours (released funconn + our occ3)", None, None, None)]
+    d = randi.load_responses("wildty")
+    d = d[d.pre.isin(idx) & d.post.isin(idx)]
+    resp_ours = np.zeros_like(occ_ours, dtype=bool)
+    resp_ours[d.post.map(idx).to_numpy(), d.pre.map(idx).to_numpy()] = True
+    io, jo = np.nonzero(occ_ours)
+    yo = resp_ours[io, jo].astype(float)
+    Ro = randi.resolvent(A, ALPHA)
+    nso = A[jo, io] == 0
+    rows = [("Cook 2019", "ours (released funconn + our occ3)",
+             roc_auc_score(yo, A[jo, io]), roc_auc_score(yo, Ro[jo, io]),
+             roc_auc_score(yo[nso], Ro[jo, io][nso]))]
     for tag, Amat in (("White + Witvliet", z["aconn"].T), ("Cook 2019", Acook)):
         R = randi.resolvent(Amat, ALPHA)
         direct, walk = Amat[jj, ii], R[jj, ii]
         sub = direct == 0
         rows.append((tag, "theirs (q < 0.05)", roc_auc_score(y, direct),
                      roc_auc_score(y, walk), roc_auc_score(y[sub], walk[sub])))
-    rows[0] = ("Cook 2019", "ours (released funconn + our occ3)", 0.5620, 0.6372, 0.6026)
     for tag, src, a, b, c in rows:
         lines.append(f"| {tag} | {src} | {a:.4f} | {b:.4f} | {c:.4f} |")
-    lines += ["\nDirect weight lands at 0.56 in every combination and the walk operator "
-              "at 0.64-0.66, so the ordering and roughly the size of the gap are "
-              "reproduced through a different connectome, a different response call and "
-              "a different observation denominator.\n"]
+    da, wa = [r[2] for r in rows], [r[3] for r in rows]
+    lines += [f"\nDirect weight {min(da):.3f}-{max(da):.3f}, walk operator "
+              f"{min(wa):.3f}-{max(wa):.3f}; walk minus direct "
+              f"{min(b - a for a, b in zip(da, wa)):+.3f} to "
+              f"{max(b - a for a, b in zip(da, wa)):+.3f} across the three combinations "
+              "of connectome, response call and observation denominator.\n"]
 
     OUT.write_text("\n".join(lines) + "\n")
     print("\n".join(lines))

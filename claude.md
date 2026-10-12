@@ -1,9 +1,8 @@
 # connectome_resolutions
 
-Code for the manuscript in `docs/main.tex` (supplement: `docs/supplementary_methods_draft.tex`):
-at what resolution does a connectome stop predicting signal propagation? README.md has the
-layout, setup, and the map from every manuscript figure, analysis and supplementary table to
-its script. Read it before working on the code.
+Analysis code for a study of the resolution at which a connectome stops predicting signal
+propagation. README.md has the layout, setup, data sources, and the map from each manuscript
+figure and analysis to the script that produces it. Read it before working on the code.
 
 ## Layout and naming
 
@@ -11,19 +10,16 @@ its script. Read it before working on the code.
   observables, partitions, scoring helpers.
 - `scripts/`: run from the repo root (`python scripts/<name>.py`).
   - Panel scripts are named after the manuscript panel they draw: `figN<panel>_<what>.py`
-    (`fig1b_roc.py` draws Fig. 1B). Panels are SVGs in `figures/figN/`, assembled by hand in
-    `figures/figN/figure_N.ai`.
+    (`fig1b_roc.py` draws Fig. 1B) and write SVGs to `figures/figN/`.
   - Analysis scripts have descriptive names and write `results/<script name>*.csv|npz|log`.
-  - `scripts/diagnostics/`: standalone checks that support statements but feed no table or
-    figure. Each calls `conres.paths.tee_stdout(__file__)`, so its printed output is saved to
+  - `scripts/diagnostics/`: standalone checks that feed no table or figure. Each calls
+    `conres.paths.tee_stdout(__file__)`, so its printed output is saved to
     `results/diagnostics/<name>.log`.
-- `archive/`: superseded or unused scripts and figures. It is gitignored, unmaintained and not
-  part of the pipeline. If the manuscript turns out to cite a result produced only there,
-  restore the script to `scripts/` with fixed imports and a descriptive name.
-- `microns/`: exploratory MICrONS analyses, not in the manuscript.
+- `tests/`: regression tests (`pytest tests/`).
 - `preregistration/`: the FlyWire partition rule. Never edit the rule; deviations go in its
   dated Amendments section, with the reason.
-- `data/`, `results/`, `figures/`, `docs/` are not tracked.
+- `data/`, `results/`, `figures/` and `snapshots/` are not tracked. `data_manifest.sha256`
+  lists the expected input files.
 - PNG previews of figure panels are written only when `CONRES_CHECK_DIR` is set.
 
 ## Conventions the code relies on
@@ -43,42 +39,42 @@ its script. Read it before working on the code.
 - Size-matched random partitions are label permutations of the partition being tested.
 - Cluster bootstrap resamples the cell class of the stimulated neuron
   (`observables.boot_indices`).
-- Before interpreting any rank or overlap metric on sparse binary data, run
-  `conres.metric_guard` (tie blocks, base rate, chance floor).
+- Before reading any rank or overlap metric on sparse binary data, run `conres.metric_guard`
+  (tie blocks, base rate, chance floor).
 
-## Working on the manuscript
+## Reproducibility
 
-- Every number in the text must come from a file in `results/` or from a script run. Verify
-  against the code; never trust old notes or prose.
-- Mark revisions in `main.tex` and the supplement with `\rev{...}` (red).
-- Supplementary tables name their source in `% Source: scripts/... -> results/...` comments.
-  Keep these in sync when scripts or outputs are renamed.
-- When a code fix changes a number, rerun the script, diff the new outputs against the old
-  ones to confirm only the intended values moved, then update every place the number appears
-  (main text, Methods, supplement, captions).
-- For checks and comparisons, run in a scratch copy of the repo (symlink `data/`, copy
-  `results/`). That way published outputs are never overwritten by an exploratory run.
-- `main.tex` figures are not in `docs/`. Syntax-check with
-  `pdflatex "\PassOptionsToPackage{draft}{graphicx}\input{main.tex}"`.
+- Every reported number comes from a file in `results/` or from a script run.
+- A script's defaults are the settings of the reported run. Where a reported run needs other
+  flags, the README gives them.
+- A script that depends on another script's output reads the result file. Do not copy a
+  value from one script into another as a literal.
+- When a change moves a number, rerun the script and diff the new outputs against the old
+  ones to confirm that only the intended values moved.
+- Run checks and comparisons in a scratch copy of the repo (symlink `data/`, copy
+  `results/`), so that an exploratory run never overwrites a reported output.
 
 ## Documentation style
 
-Document the code as it exists now. Git history is for history.
+Code, comments and docs describe what is computed and how to reproduce it.
 
-- Never refer in comments or docs to previous implementations, earlier attempts, what was
-  changed (by anyone, including Claude), conversations or prompts, or abandoned approaches.
+- Describe the code as it is. Do not mention earlier implementations, what was changed or
+  by whom, reviews, conversations, or approaches that were not taken.
+- Refer only to files, scripts, flags and outputs that exist in the repository.
+- Keep scientific interpretation out of the code. Docstrings, comments and printed output
+  state what is measured and how. They do not say what a result means, argue for the study
+  design, or quote outcome numbers. Interpretation belongs in the manuscript.
 - Docstrings say what a component does, what it reads, what it writes, its parameters and
-  its assumptions. They do not argue for the study design or report results: outcome numbers
-  go stale and belong in the manuscript.
-- Script docstrings use short `Inputs:` / `Outputs:` / `Usage:` blocks.
-- Comments explain only what is not obvious from the code: rationale for a non-obvious
+  its assumptions. Script docstrings use short `Inputs:` / `Outputs:` / `Usage:` blocks.
+- Comments explain only what is not obvious from the code: the reason for a non-obvious
   choice, invariants, mathematics, edge cases, external constraints, units, coordinate
-  systems, and data-format quirks. Do not translate code into English. Prefer deleting a
+  systems and data-format quirks. Do not translate code into English. Prefer deleting a
   comment to adding clutter.
 
       Bad:  # Previously this used cosine similarity, but we changed it to correlation.
+      Bad:  # Classes survive here, which shows the fine structure is redundant.
       Good: # Fisher-z averaging avoids downward bias when aggregating correlations.
 
 - README describes the current workflow only.
-- Keep scientifically meaningful provenance: data sources, preregistration, and the script
-  that produces each reported result.
+- Keep provenance: data sources, the preregistration, and the script that produces each
+  reported result.

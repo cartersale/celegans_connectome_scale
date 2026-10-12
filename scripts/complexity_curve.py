@@ -43,7 +43,8 @@ Inputs:  Cook connectome and Randi atlas via conres; worm soma positions.
 Outputs: results/complexity_curve.csv  (arm, k, rep, losses)
          results/complexity_curve_k_eps.csv             (k_eps per metric, arm, eps)
          results/complexity_curve_paths.npz      (ward_<k>, envelope_<k> labels, nodes;
-                                              read by fig16, fig17, fig18)
+                                              read by observable_resolution,
+                                              coarse_trajectory, global_search)
 Usage:   python scripts/complexity_curve.py [--k-min 20] [--shortlist 30]
              [--n-bio 20] [--n-rand 10] [--n-boot 1000] [--seed 0]
 """
