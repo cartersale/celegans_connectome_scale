@@ -14,11 +14,12 @@ trajectories:
   loss_self    1 - Spearman(class-level operator, R) over all observed pairs
 
 alpha and the observed pair set come from class_merge_trajectory.setup.
-Compression is n/k, as for the fly. The printed fly reference values are fixed
-constants, not recomputed here; the printed table shows only k values that a
-trajectory hits exactly.
+Compression is n/k, as for the fly. The printed fly reference values are the
+rungs of results/fly_fragility_alpha0.1.csv with compression <= 2.5; the
+printed table shows only k values that a trajectory hits exactly.
 
-Inputs: class_merge_trajectory.setup, conres.randi.
+Inputs: class_merge_trajectory.setup, conres.randi,
+    results/fly_fragility_alpha0.1.csv.
 Outputs: results/metric_comparability.csv (mode, rep, k, compression,
     loss_auc_vs_measured, loss_self_vs_operator).
 Usage: python scripts/diagnostics/metric_comparability.py [--n-rep 15]
@@ -117,9 +118,11 @@ def main():
               f"{np.mean([x[0] for x in q]):>+11.4f} | {np.mean([x[1] for x in b]):>9.4f} "
               f"{np.mean([x[1] for x in q]):>10.4f}")
     print(f"\nFLY at comparable compression (self-referential metric, same definition):")
-    print(f"  2.50x : bio 0.2949  random 0.7418")
-    print(f"  1.82x : bio 0.2354  random 0.6286")
-    print(f"  1.43x : bio 0.1635  random 0.4992")
+    with (ROOT / "results/fly_fragility_alpha0.1.csv").open() as fh:
+        for r in csv.DictReader(fh):
+            if float(r["compression"]) <= 2.5:
+                print(f"  {float(r['compression']):.2f}x : bio {float(r['bio_loss']):.4f}  "
+                      f"random {float(r['rand_loss_mean']):.4f}")
     print(f"\nworm max compression is {302/119:.2f}x, so the overlap with the fly is 1x-2.5x")
 
 

@@ -14,9 +14,10 @@ M is n x k, which is tractable for hemilineage and hemilineage x side
 (fw.tier_a) but not for the fine hemilineage subdivisions.
 
 Null: n_null label permutations (default 30), z with ddof = 1. The printed
-worm reference line is a fixed constant, not recomputed here.
+worm reference line is read from results/class_gamma.csv.
 
-Inputs: conres.flywire (load_scope, load_adjacency, tier_a).
+Inputs: conres.flywire (load_scope, load_adjacency, tier_a),
+    results/class_gamma.csv.
 Outputs: printed only.
 Usage: python scripts/diagnostics/fly_equitability.py [n_null]
 """
@@ -30,7 +31,8 @@ import numpy as np
 import scipy.sparse as sp
 
 warnings.filterwarnings("ignore")
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "src"))
 
 from conres import flywire as fw                      # noqa: E402
 from conres.paths import tee_stdout                   # noqa: E402
@@ -67,11 +69,10 @@ def main():
         z = (g - nl.mean()) / nl.std(ddof=1)
         print(f"{name:>26} {lab.max()+1:>7} {A.shape[0]/(lab.max()+1):>7.0f}x "
               f"{g:>8.3f} {nl.mean():>9.3f}+-{nl.std(ddof=1):.3f} {z:>8.2f}")
-    print(f"\n  worm reference, class partition: k=119, 2.5x, gamma 0.287, z -32.3")
-    print("  (z is the comparable quantity across species; gamma alone scales with k)")
-    print("\n  A fly z near zero would mean hemilineages are no more equitable than")
-    print("  chance, which would explain the residual gap. A large negative z would")
-    print("  mean they ARE equitable and the residual needs another explanation.")
+    worm = np.genfromtxt(ROOT / "results/class_gamma.csv", delimiter=",", names=True)
+    print(f"\n  worm reference, class partition: k=119, 2.5x, "
+          f"gamma {float(worm['gamma_out']):.3f}, z {float(worm['z']):.1f}")
+    print("  (gamma depends on k; z is relative to size-matched random partitions)")
 
 
 if __name__ == "__main__":

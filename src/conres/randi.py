@@ -133,10 +133,11 @@ def build_occ3(nodes: list[str], strain: str = "wt",
     i was also identified (i != j). A pair is "observed" when occ3 > 0; the
     count also serves as the exposure covariate.
 
-    ROI labels are used only when they exactly match a name in `nodes`. The
-    exports also contain glia (AMsoL), annotation notes ('merge', 'smthng
-    else'), bare ROI numbers and partial identifications (IL2V, AWCOFF); none
-    match a connectome node and none appear in the released atlas.
+    ROI labels are name-normalised and used only when they match a name in
+    `nodes`. The exports also contain glia (AMsoL), annotation notes ('merge',
+    'smthng else'), bare ROI numbers and partial identifications (IL2V,
+    AWCOFF); none match a connectome node and none appear in the released
+    atlas.
 
     Returns (occ3, occ3): both elements are the same array.
     """
@@ -145,6 +146,7 @@ def build_occ3(nodes: list[str], strain: str = "wt",
     n = len(nodes)
     occ3 = np.zeros((n, n))
     for labels, stims in _recordings(folder, keep):
+        labels = [ce.normalise_name(v) for v in labels]
         present = sorted({valid[v] for v in labels if v in valid})
         if not present:
             continue

@@ -19,11 +19,11 @@ identities, giving an exact p value.
 Merge sets are recomputed here with the criterion and pool of
 cross_animal_transfer.py (pairwise_defect and greedy_disjoint from
 prospective_merges.py, pool_mask from cross_animal_transfer.py, 30
-disjoint merges). As a consistency check against that script, the mean Jaccard
-must be 0.215 +- 0.0015 or the script exits.
+disjoint merges). As a consistency check, every pairwise Jaccard must equal
+the value that script saved, or this one exits.
 
-Inputs: results/cross_animal_transfer_m30.csv (loss matrix and random
-arm); Witvliet 2021 datasets via conres.celegans.
+Inputs: results/cross_animal_transfer_m30.csv (loss matrix, random arm and
+merge-set Jaccard); Witvliet 2021 datasets via conres.celegans.
 Outputs: results/fig4e_transfer_overlap.csv (a, b, jaccard, eff_a_to_b,
 eff_b_to_a, eff_mean), figures/fig4/fig4e_transfer_overlap.svg.
 """
@@ -97,8 +97,11 @@ def main() -> None:
     iu = np.triu_indices(8, 1)
     mean_j = float(np.mean(J[iu]))
     print(f"merge-set Jaccard: mean {mean_j:.3f} [{J[iu].min():.3f}, {J[iu].max():.3f}]")
-    if abs(mean_j - 0.215) > 0.0015:
-        raise SystemExit("merge sets do not reproduce cross_animal_transfer.py (mean Jaccard 0.215)")
+    d = pd.read_csv(DATA)
+    saved = np.array([d[(d.kind == "jaccard") & (d.train == ANIMALS[a])
+                        & (d.test == ANIMALS[b])].value.iloc[0] for a, b in zip(*iu)])
+    if not np.allclose(J[iu], saved, atol=1e-5):
+        raise SystemExit("merge sets do not reproduce cross_animal_transfer.py")
 
     E = efficiency()
     off = ~np.eye(8, dtype=bool)

@@ -10,14 +10,13 @@ dependencies = [
     "scikit-learn",
     "matplotlib",
     "statsmodels",   # exposure_control.py
-    "networkx",      # fig3_amq.py
     "openpyxl",      # Witvliet .xlsx files
-    "pyarrow",       # FlyWire and MICrONS .feather files
+    "pyarrow",       # FlyWire .feather files
 ]
 
 [project.optional-dependencies]
 virtualworm = ["blender-asset-tracer"]   # first read of the VirtualWorm .blend
-microns = ["h5py", "remfile"]            # microns/scripts/microns_fetch_traces.py
+test = ["pytest"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

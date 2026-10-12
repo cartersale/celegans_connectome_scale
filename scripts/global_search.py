@@ -34,7 +34,7 @@ Inputs:  Cook connectome and Randi atlas via conres; results/complexity_curve_pa
 Outputs: results/global_search.csv  (one row per chain)
          results/global_search.npz  (best labels and trace per chain;
                                            names with ':' replaced by '__')
-Usage:   python scripts/global_search.py [--n-iter 40000] [--n-random 4]
+Usage:   python scripts/global_search.py [--n-iter 60000] [--n-random 4]
              [--t0 2e-3] [--t1 2e-5] [--workers 12] [--n-local 2000] [--seed 0]
 """
 from __future__ import annotations
@@ -173,7 +173,7 @@ def local_check(bio, n_draws, seed):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--n-iter", type=int, default=40000)
+    ap.add_argument("--n-iter", type=int, default=60000)
     ap.add_argument("--n-random", type=int, default=4)
     ap.add_argument("--t0", type=float, default=2e-3)
     ap.add_argument("--t1", type=float, default=2e-5)

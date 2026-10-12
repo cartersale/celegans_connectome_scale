@@ -26,7 +26,7 @@ N_BOOT = 1000 resamples, seed 7.
 Inputs: setup_corr, build_sta, walk_length, PRE, WIN from
     observable_resolution (which also loads the STA cache); Randi
     wild-type responses via conres.randi.
-Outputs: results/observable_class_loss.csv; figures/supplementary/observable_class_loss.{svg,pdf}.
+Outputs: results/observable_class_loss.csv; figures/supp/observable_class_loss.{svg,pdf}.
 """
 from __future__ import annotations
 
@@ -46,13 +46,14 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from conres import figstyle as fs, randi                            # noqa: E402
-from observable_resolution import (build_sta, walk_length,     # noqa: E402
-                                         setup_corr, PRE, WIN)
+from conres.observables import (pair_sets as setup_corr,            # noqa: E402
+                                build_sta, PRE, WIN)
+from observable_resolution import walk_length                       # noqa: E402
 
 ALPHA, N_NULL, N_BOOT = 0.1, 200, 1000
 BIO, RND = fs.CLASS, fs.GREY
 FS = 6.5
-OUT = ROOT / "figures/supplementary"
+OUT = ROOT / "figures/supp"
 
 
 def main() -> None:
@@ -167,7 +168,7 @@ def main() -> None:
             transform=ax.transAxes)
     fs.save(fig, OUT / "observable_class_loss.svg")
     fig.savefig(OUT / "observable_class_loss.pdf")
-    print("wrote results/observable_class_loss.csv and figures/supplementary/observable_class_loss.{svg,pdf}")
+    print("wrote results/observable_class_loss.csv and figures/supp/observable_class_loss.{svg,pdf}")
 
 
 if __name__ == "__main__":

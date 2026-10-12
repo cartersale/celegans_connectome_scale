@@ -3,7 +3,7 @@ and matched random trajectories.
 
 Each replicate shuffles the multi-member cell classes and collapses them one at
 a time; after each step the lifted class-level resolvent (alpha = 0.1) is scored
-on both observables from two_observables.setup. The random arm uses the
+on both observables from conres.observables.pair_sets. The random arm uses the
 same class order (same seed per replicate) but fills each cell with randomly
 chosen unmerged neurons, so k and the cell-size profile match the class arm at
 every step. Losses are expressed as fractions of the full operator's headroom:
@@ -29,10 +29,9 @@ from sklearn.metrics import roc_auc_score
 
 warnings.filterwarnings("ignore")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from conres import randi                            # noqa: E402
-from two_observables import setup              # noqa: E402
+from conres.observables import pair_sets as setup   # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 ALPHA = 0.1

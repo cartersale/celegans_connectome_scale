@@ -3,13 +3,13 @@ groupings: the hemilineage soma-position subdivision, curated cell_type, and a
 size-matched random partition.
 
 The hemilineage subdivision (fw.subsplit) is the pre-registered,
-connectivity-blind rule. FlyWire cell_type is partly defined from connectivity,
-so it is used only as a ceiling: how much lower the loss can go with a curated
-grouping at the same k. Loss is fly_fragility.rung_loss on 200
+connectivity-blind rule. FlyWire cell_type is partly defined from connectivity
+and is included as a curated grouping at the same k. Loss is fly_fragility.rung_loss on 200
 out-degree-stratified sources x 400 targets (seed 0), alpha = 0.1. The printed
-worm reference values are fixed constants, not recomputed here.
+worm reference values are the k = 119 means of loss_struct_occ in
+results/class_merge_structural_loss.csv.
 
-Inputs: conres.flywire, fly_fragility.
+Inputs: conres.flywire, fly_fragility, results/class_merge_structural_loss.csv.
 Outputs: printed only.
 Usage: python scripts/diagnostics/fly_soma_split_diagnostic.py
 """
@@ -23,7 +23,8 @@ import numpy as np
 import pandas as pd
 
 warnings.filterwarnings("ignore")
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from conres import flywire as fw                      # noqa: E402
@@ -94,13 +95,14 @@ def main():
     print(f"\nAt k={TARGET_K:,} (2.5x compression):")
     tb = fw.subsplit(meta, 0.40)
     for name, lab in (("Tier B soma-position (pre-registered)", tb),
-                      ("cell_type ceiling (contaminated)", celltype_at_k(meta, TARGET_K, rng)),
+                      ("cell_type (uses connectivity)", celltype_at_k(meta, TARGET_K, rng)),
                       ("size-matched random", fw.size_matched_random(tb, rng))):
         loss = F.rung_loss(A, lab, sources, tgt, full_vals, ALPHA, rho)
         print(f"  {name:38s} k={lab.max()+1:6d}  loss {loss:.4f}")
-    print(f"\n  worm biological at 2.54x: 0.1218   worm random at 2.54x: 0.7066")
-    print("\n  If the ceiling lands near the worm's 0.122, the residual gap is the")
-    print("  blind Tier B rule. If it stays near 0.295, it is a real species difference.")
+    worm = pd.read_csv(ROOT / "results/class_merge_structural_loss.csv")
+    worm = worm[worm.k == 119].groupby("mode").loss_struct_occ.mean()
+    print(f"\n  worm biological at 2.54x: {worm['bio']:.4f}   "
+          f"worm random at 2.54x: {worm['random']:.4f}")
 
 
 if __name__ == "__main__":

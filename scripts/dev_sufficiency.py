@@ -156,7 +156,7 @@ def table(rows, title):
         rho, pv = stats.spearmanr(idx[ok], v[ok])
         print(f"     {k:>12}  rho = {rho:+.3f}   p = {pv:.3f}")
 
-table(rows_raw,  "RAW (density confounded -- do not interpret trends here)")
+table(rows_raw,  "RAW (synapse count differs across datasets)")
 table(rows_thin, f"THINNED to {BUDGET} synapses ({THIN_REPS} reps averaged)")
 
 # raw and thinned rows (thinned with their spread over replicates) for fig4c_dev_loss.py

@@ -6,7 +6,7 @@ and volumes s-2 .. s+WIN-1 (WIN = 40) are masked, the same window as
 conres.randi.build_correlations(excise=40); overlapping windows mean the number
 of masked frames is matched only approximately. Correlations are otherwise
 computed as in build_correlations. For three sham seeds and for true excision,
-the full resolvent (alpha = 0.1), the lifted class-level resolvent and 100
+the full resolvent (alpha = 0.1), the lifted class-level resolvent and N_NULL
 size-matched random partitions (two_observables.size_matched, seed 0) are
 scored by Spearman against the correlations of pairs co-identified in >= 3
 recordings, with loss as a fraction of the full operator's rho.
@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from conres import celegans as ce, randi
 from two_observables import size_matched
-ALPHA=0.1; WIN=40
+ALPHA=0.1; WIN=40; N_NULL=200
 
 def correlations_sham(nodes, win, seed):
     folder=randi.EXPORTED/"exported_data"; valid={n:k for k,n in enumerate(nodes)}
@@ -64,7 +64,7 @@ def arm(R,cnt):
     full=rho(S); bio=rho(randi.resolvent(randi.quotient(A,lab),ALPHA)[np.ix_(lab,lab)])
     rng=np.random.default_rng(0)
     rnd=[rho(randi.resolvent(randi.quotient(A,rl),ALPHA)[np.ix_(rl,rl)])
-         for rl in (size_matched(lab,rng) for _ in range(100))]
+         for rl in (size_matched(lab,rng) for _ in range(N_NULL))]
     rnd=np.array(rnd); head=full  # headroom above chance (rho=0)
     return dict(npair=keep.sum(),full=full,bio=bio,rnd=rnd.mean(),
                 bfrac=(full-bio)/head,rfrac=(full-rnd.mean())/head,
