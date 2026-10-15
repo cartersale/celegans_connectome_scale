@@ -107,6 +107,7 @@ Other analyses reported in the main text:
 | prospective merges, degree floors; 29 (the median) is the primary criterion (Connectivity-defined classes) | `prospective_merges --min-degree {0,20,29,40}` |
 | simulated annealing at k = 119, 60,000 proposals per chain (Connectivity-defined classes) | `global_search` |
 | predictive transfer of L1 merges to the adult, 161 candidates and 70 merges (Development and transfer) | `functional_transfer --pool all --n-merge 70` |
+| predictive transfer at other merge counts, and with the degree floor (86 candidates, 30 merges) | `functional_transfer --pool all --n-merge {40,55,75}`, `functional_transfer --pool floor --n-merge 30` |
 | class-member agreement, κ | `kappa_interchangeability`, `exchangeability` |
 | γ of the cell classes vs 1,000 random partitions (Equitable partitions) | `class_gamma` |
 | class-level loss for five observables vs 200 random partitions (Measured signal propagation) | `observable_class_loss` |
@@ -121,7 +122,7 @@ Other analyses reported in the main text:
 | dependence structure | `dependence_control`, `dependence_twoway_boundary` |
 | sensitivity to α | `alpha_sensitivity` |
 | spectral normalization | `normalization_control`, `normalization_fly`, `fly_fragility --own-rho` |
-| unc-31 | `unc31_path_advantage` |
+| unc-31 | `unc31_path_advantage`, `unc31_trial_model` |
 | chemical synapses only, gap junctions only | `contact_type_control` |
 | lineage-only classes, γ calibration | `supp_checks` |
 | stimulus-locked regression | `sta_regression` |

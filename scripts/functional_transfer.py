@@ -27,7 +27,8 @@ Inputs: Cook 2019 connectome and Witvliet 2021 connectomes (conres.celegans),
 Randi 2023 wild-type responses and observation counts (conres.randi); imports
 prospective_merges and cross_animal_transfer.
 Outputs: results/functional_transfer_<pool>_m<n_merge>.csv (arm, auc,
-auc_inpool, auc_nosyn, struct_loss).
+auc_inpool, auc_nosyn, struct_loss) and the printed table, with the standard
+deviation of the two null arms, in results/functional_transfer_<pool>_m<n_merge>.log.
 Usage: functional_transfer.py [--n-merge 30] [--pool floor|all]
        [--n-null 50] [--seed 0]
 """
@@ -50,6 +51,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from conres import celegans as ce, randi                       # noqa: E402
+from conres.paths import _Tee                                  # noqa: E402
 from prospective_merges import (pairwise_defect,           # noqa: E402
                                      greedy_disjoint, labels_from_pairs)
 from cross_animal_transfer import pool_mask               # noqa: E402
@@ -66,13 +68,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n-merge", type=int, default=30)
     ap.add_argument("--pool", choices=("floor", "all"), default="floor",
-                    help="'floor' is the Fig. 10 degree-floored pool; 'all' drops "
-                         "the floor to reach compression deep enough for the "
-                         "functional metric to resolve the arms")
+                    help="'floor': neurons at or above median degree in the summed "
+                         "Witvliet graph; 'all': every common Witvliet neuron")
     ap.add_argument("--n-null", type=int, default=50)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
     m = args.n_merge
+    log = ROOT / f"results/functional_transfer_{args.pool}_m{m}.log"
+    sys.stdout = _Tee(sys.__stdout__, log.open("w", buffering=1))
 
     A, nodes = ce.build_matrix("all", neurons_only=True)
     n = len(nodes)
