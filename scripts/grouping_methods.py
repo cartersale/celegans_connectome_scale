@@ -58,6 +58,34 @@ ALPHA = 0.1
 K_GRID = (20, 15, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2)
 
 
+def method_builders(A, nodes, R, n_seed):
+    """Return builders(k), yielding (method, [labels per seed]) for the six methods.
+
+    Deterministic methods (loss-greedy, Ward) give one partition; the k-means and
+    spectral methods give one per seed 0..n_seed-1.
+    """
+    Xop = np.log1p(np.hstack([R, R.T]) / R.max() * 1e3)
+    Xw = np.log1p(np.hstack([A, A.T]))
+    W = A + A.T
+    aff = W / W.max()
+    ward_tree = linkage(Xop, method="ward")
+    greedy = np.load(ROOT / "results/coarse_trajectory_paths.npz")
+
+    def builders(k):
+        yield "loss-greedy", [relabel(greedy[f"envelope_{k}"])]
+        yield "Ward on operator", [relabel(fcluster(ward_tree, t=k, criterion="maxclust"))]
+        yield "k-means on operator", [relabel(KMeans(k, n_init=10, random_state=s).fit(Xop).labels_)
+                                      for s in range(n_seed)]
+        yield "k-means on wiring", [relabel(KMeans(k, n_init=10, random_state=s).fit(Xw).labels_)
+                                    for s in range(n_seed)]
+        yield "spectral", [relabel(SpectralClustering(k, affinity="precomputed", random_state=s,
+                                                      assign_labels="kmeans").fit(aff).labels_)
+                           for s in range(n_seed)]
+        yield "spatial", [spatial_kmeans(nodes, k, s) for s in range(n_seed)]
+
+    return builders
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n-seed", type=int, default=5)
@@ -73,24 +101,7 @@ def main():
     full_boot = {o: np.array([ob.score(k, ob.predict(k, R, j, i), v, s) for s in boots[o]])
                  for o, (j, i, v, k) in obs.items()}
 
-    Xop = np.log1p(np.hstack([R, R.T]) / R.max() * 1e3)
-    Xw = np.log1p(np.hstack([A, A.T]))
-    W = A + A.T
-    aff = W / W.max()
-    ward_tree = linkage(Xop, method="ward")
-    greedy = np.load(ROOT / "results/coarse_trajectory_paths.npz")
-
-    def builders(k):
-        yield "loss-greedy", [relabel(greedy[f"envelope_{k}"])]
-        yield "Ward on operator", [relabel(fcluster(ward_tree, t=k, criterion="maxclust"))]
-        yield "k-means on operator", [relabel(KMeans(k, n_init=10, random_state=s).fit(Xop).labels_)
-                                      for s in range(args.n_seed)]
-        yield "k-means on wiring", [relabel(KMeans(k, n_init=10, random_state=s).fit(Xw).labels_)
-                                    for s in range(args.n_seed)]
-        yield "spectral", [relabel(SpectralClustering(k, affinity="precomputed", random_state=s,
-                                                      assign_labels="kmeans").fit(aff).labels_)
-                           for s in range(args.n_seed)]
-        yield "spatial", [spatial_kmeans(nodes, k, s) for s in range(args.n_seed)]
+    builders = method_builders(A, nodes, R, args.n_seed)
 
     def evaluate(method, k, labs, rows):
         per_seed = []

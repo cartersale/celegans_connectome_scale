@@ -43,8 +43,8 @@ OUT = ROOT / "figures/fig4"
 DATA = ROOT / "results/cross_animal_transfer_m30.csv"
 
 ANIMALS = ["1L", "2L", "3L", "4L", "5L", "6L", "7a", "8a"]
-LABEL = {"1L": "L1", "2L": "L1", "3L": "L1", "4L": "L1",
-         "5L": "L2", "6L": "L3", "7a": "adult", "8a": "adult"}
+TICK = {"1L": "L1-1", "2L": "L1-2", "3L": "L1-3", "4L": "L1-4",
+        "5L": "L2", "6L": "L3", "7a": "A1", "8a": "A2"}
 BIO, RAND, WITHIN, TRANS = "#2e9e52", "#8b9196", "#22282d", "#2a5fd6"
 LOSS = LinearSegmentedColormap.from_list("loss", ["#ffffff", "#cfe0f2", "#5e8fc7", "#1f3d66"])
 FS = 6.5
@@ -83,8 +83,8 @@ def matrix(M, arms):
         ax.add_patch(Rectangle((i - 0.5, i - 0.5), 1, 1, fill=False, ec=fs.INK,
                                lw=0.9, zorder=3))
     ax.set_xticks(range(8)); ax.set_yticks(range(8))
-    ax.set_xticklabels(ANIMALS, fontsize=FS - 1.5)
-    ax.set_yticklabels(ANIMALS, fontsize=FS - 1.5)
+    ax.set_xticklabels([TICK[a] for a in ANIMALS], fontsize=FS - 1.5)
+    ax.set_yticklabels([TICK[a] for a in ANIMALS], fontsize=FS - 1.5)
     ax.tick_params(length=0, pad=1.5, colors=fs.INK)
     for sp in ax.spines.values():
         sp.set_linewidth(0.5); sp.set_color(fs.FAINT)
@@ -104,7 +104,7 @@ def matrix(M, arms):
     worst = float(R[off].max())
     for y, col, lab in ((1.00, fs.INK, "1.00  chance"),
                         (worst, fs.INK, f"{worst:.2f}".lstrip("0") + "  worst transfer"),
-                        (bio, BIO, f"{bio:.2f}".lstrip("0") + "  biological classes"),
+                        (bio, BIO, f"{bio:.2f}".lstrip("0") + "  cell classes"),
                         (0.00, fs.GREY, "0  lossless")):
         cb.ax.plot([0, 1.0], [y, y], color=col, lw=1.0, clip_on=False, zorder=5,
                    transform=yax)
@@ -120,7 +120,7 @@ def arms_panel(arms):
     series = (("random", RAND, "size-matched random", "o"),
               ("transfer", TRANS, "transferred from another animal", "o"),
               ("within", WITHIN, "within-animal optimum (ceiling)", "o"),
-              ("biological", BIO, "biological classes", "o"))
+              ("biological", BIO, "cell classes", "o"))
     for key, col, lab, mk in series:
         ax.plot(x, arms[key], color=col, lw=1.2, marker=mk, ms=3.0, mew=0,
                 label=lab, zorder=3)
@@ -133,7 +133,7 @@ def arms_panel(arms):
 
     fs.style(ax)
     ax.set_xticks(x)
-    ax.set_xticklabels([f"{a}\n{LABEL[a]}" for a in ANIMALS], fontsize=FS - 1.5)
+    ax.set_xticklabels([TICK[a] for a in ANIMALS], fontsize=FS - 1.5)
     ax.set_xlim(-0.4, 7.4); ax.set_ylim(0, 0.30)
     ax.set_ylabel("structural loss", fontsize=FS)
     ax.set_xlabel("animal the partition was scored on", fontsize=FS, labelpad=1.0)

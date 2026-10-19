@@ -27,8 +27,9 @@ exposure_control.py); AUC(R) - AUC(direct connection strength); the ratio of
 median R between responding and non-responding unsynapsed pairs; Spearman rho
 of R[a,b] + R[b,a] with activity correlations. For the class-level operator on
 cell classes and on the loss-guided k = 9 and k = 8 partitions: fraction of the
-full operator's above-chance performance (all pairs, unsynapsed, correlation),
-and for cell classes the fraction minus the mean over --n-rand size-matched
+full operator's above-chance performance (all pairs, unsynapsed, correlation);
+for cell classes also the AUC difference from the full operator (all pairs,
+unsynapsed), and the fraction minus the mean over --n-rand size-matched
 random partitions (unsynapsed propagation, correlation). p_le_0 / p_le_1 are
 the fractions of resamples at or below 0 (differences) or 1 (ratios).
 
@@ -152,6 +153,9 @@ def main():
             out[f"{name} frac_all"] = auc(Q[j, i], y) / out["auc_all"]
             out[f"{name} frac_nosyn"] = auc(Q[j, i][ns], y[ns]) / out["auc_nosyn"]
             out[f"{name} frac_corr"] = rho(Q[a, b] + Q[b, a], r) / out["rho_corr"]
+        Qc = Qs["cell classes"]
+        out["cell classes minus full, auc_all"] = auc(Qc[j, i], y) - out["auc_all"]
+        out["cell classes minus full, auc_nosyn"] = auc(Qc[j, i][ns], y[ns]) - out["auc_nosyn"]
         rn = np.mean([auc(Q[j, i][ns], y[ns]) for Q in Qrand]) / out["auc_nosyn"]
         rc = np.mean([rho(Q[a, b] + Q[b, a], r) for Q in Qrand]) / out["rho_corr"]
         out["cell classes minus random, nosyn"] = out["cell classes frac_nosyn"] - rn

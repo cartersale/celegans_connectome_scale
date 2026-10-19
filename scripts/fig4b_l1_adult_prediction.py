@@ -143,7 +143,7 @@ def main() -> None:
 
     # ------------------------------------------------------------------ panel
     fs.use()
-    arms = [("classes", "cell classes", BIO, "o", True),
+    arms = [("classes", "same-class merges", BIO, "o", True),
             ("adult", "inferred in the adult", INK, "o", True),
             ("L1", "inferred in L1 animals", TRANS, "o", True),
             ("thinned", "adult, thinned to\ndevelopmental synapse counts", INK, "o", False),
@@ -160,7 +160,11 @@ def main() -> None:
         m = float(np.mean(v))
         ax.plot([m, m], [yv - 0.3, yv + 0.3], color=col, lw=1.6, zorder=4,
                 solid_capstyle="butt")
-        ax.text(m, yv + 0.36, f"{m:.1f}%", fontsize=FS - 1.4, color=col, ha="center",
+        # labels within 2 points of zero sit beside the zero line rather than on it
+        near0 = abs(m) < 2
+        ax.text(m + (0.6 if m >= 0 else -0.6) * near0, yv + 0.36,
+                f"{m:.1f}%".replace("-", "\u2212"), fontsize=FS - 1.4, color=col,
+                ha=("left" if m >= 0 else "right") if near0 else "center",
                 va="bottom", zorder=5)
     ax.axvline(0, color=INK, lw=0.5, zorder=1)
     ax.set_yticks(range(len(arms)), [a[1] for a in arms][::-1], fontsize=FS - 1.0)

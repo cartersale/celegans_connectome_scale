@@ -1,4 +1,4 @@
-"""Draw direct synaptic weight and the walk operator against response magnitude and occurrence.
+"""Draw direct synaptic weight and the path operator against response magnitude and occurrence.
 
 Two SVGs, each carrying both predictors:
 
@@ -14,7 +14,7 @@ Two SVGs, each carrying both predictors:
 Response magnitudes are |value| from the released funconn atlas, in atlas units;
 the release does not state a dF/F calibration.
 
-The walk operator is the resolvent at alpha = 0.1.
+The path operator is the resolvent at alpha = 0.1.
 
 Inputs:  conres.celegans, conres.randi.
 Outputs: figures/fig1/fig1_weight_vs_response.svg, fig1b_roc.svg, plus PNG
@@ -52,7 +52,7 @@ plt.rcParams.update({
 })
 
 INK, GREY, FAINT = "#22282d", "#8b9196", "#c9ced2"
-WALK = "#2a5fd6"          # the walk operator, in every panel
+PATH = "#2a5fd6"          # the path operator, in every panel
 ALPHA = 0.1
 
 
@@ -91,7 +91,7 @@ def main() -> None:
 
     fig = plt.figure(figsize=(2.35, 2.05))
     ax = fig.add_axes([0.24, 0.20, 0.72, 0.60])      # direct weight, bottom axis
-    tw = ax.twiny()                                   # walk operator, top axis
+    tw = ax.twiny()                                   # path operator, top axis
 
     def cloud(a, xv, color, marker, dash, fill, z):
         """Scatter plus log-log fit line; returns the slope. Dash phases are
@@ -112,7 +112,7 @@ def main() -> None:
     tw.set_xscale("log")
     tw.set_xlim(3e-4, 9e-2)
 
-    slope_r = cloud(tw, r[con], WALK, "^", (0, (3.6, 3.6)), "none", 3)
+    slope_r = cloud(tw, r[con], PATH, "^", (0, (3.6, 3.6)), "none", 3)
     slope_w = cloud(ax, w[con], INK, "o", (3.6, (3.6, 3.6)), INK, 2)
 
     ax.set_xticks([1, 10, 100])
@@ -123,17 +123,17 @@ def main() -> None:
                   labelpad=1.5)
     ax.set_ylabel("Measured response\n(atlas units)", fontsize=6.4, color=INK,
                   labelpad=1.5, linespacing=1.3)
-    tw.set_xlabel("Walk operator ($\\alpha$ = 0.1)", fontsize=6.4, color=WALK,
+    tw.set_xlabel("Path operator ($\\alpha$ = 0.1)", fontsize=6.4, color=PATH,
                   labelpad=2.0)
     style(ax)
     for side in ("left", "right", "bottom"):
         tw.spines[side].set_visible(False)
     tw.spines["top"].set_linewidth(0.7)
-    tw.spines["top"].set_color(WALK)
-    tw.tick_params(labelsize=6.0, colors=WALK, length=2.4, width=0.7, pad=1.6)
+    tw.spines["top"].set_color(PATH)
+    tw.tick_params(labelsize=6.0, colors=PATH, length=2.4, width=0.7, pad=1.6)
 
     for k, (col, mk, fill, rr) in enumerate(((INK, "o", INK, rho_w),
-                                             (WALK, "^", "none", rho_r))):
+                                             (PATH, "^", "none", rho_r))):
         yk = 0.145 - 0.095 * k
         ax.plot([0.605], [yk], mk, ms=2.6, mfc=fill, mec=col, mew=0.6,
                 transform=ax.transAxes, clip_on=False)
@@ -145,7 +145,7 @@ def main() -> None:
     save(fig, "fig1_weight_vs_response")
     plt.close(fig)
     print(f"  direct rho = {rho_w.statistic:+.4f} (p={rho_w.pvalue:.3f}, slope {slope_w:+.3f}); "
-          f"walk rho = {rho_r.statistic:+.4f} (p={rho_r.pvalue:.3f}, slope {slope_r:+.3f}); "
+          f"path rho = {rho_r.statistic:+.4f} (p={rho_r.pvalue:.3f}, slope {slope_r:+.3f}); "
           f"n = {con.sum()}")
 
     # ------------------------------------------------------ ROC, observed pairs
@@ -158,7 +158,7 @@ def main() -> None:
     ax.plot([0, 1], [0, 1], ls=(0, (3.4, 2.4)), color=GREY, lw=0.9, zorder=2)
 
     aucs = {}
-    for name, v, color, z in (("walk operator", R[jj, ii], WALK, 4),
+    for name, v, color, z in (("path operator", R[jj, ii], PATH, 4),
                               ("direct weight", A[jj, ii], INK, 3)):
         fpr, tpr, _ = roc_curve(lab, v)
         keep = np.unique(np.linspace(0, len(fpr) - 1, min(600, len(fpr))).astype(int))
@@ -175,7 +175,7 @@ def main() -> None:
     ax.set_ylabel("True positive rate", fontsize=6.4, color=INK, labelpad=1.5)
     style(ax)
 
-    legend = (("Walk operator", aucs["walk operator"], WALK, 1.4, "-"),
+    legend = (("Path operator", aucs["path operator"], PATH, 1.4, "-"),
               ("Direct weight", aucs["direct weight"], INK, 1.4, "-"),
               ("Chance", 0.5, GREY, 0.9, (0, (3.4, 2.4))))
     for k, (name, auc, color, lw, ls) in enumerate(legend):
@@ -189,7 +189,7 @@ def main() -> None:
             linespacing=1.3)
     save(fig, "fig1b_roc")
     plt.close(fig)
-    print(f"  AUC direct {aucs['direct weight']:.4f}, walk {aucs['walk operator']:.4f}, "
+    print(f"  AUC direct {aucs['direct weight']:.4f}, path {aucs['path operator']:.4f}, "
           f"on {len(lab)} observed pairs / {int(lab.sum())} responses")
 
 

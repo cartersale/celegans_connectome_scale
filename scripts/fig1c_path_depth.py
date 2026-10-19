@@ -1,4 +1,4 @@
-"""Score the walk operator truncated at K steps for response occurrence and magnitude.
+"""Score the path operator truncated at K steps for response occurrence and magnitude.
 
 The predictor is
 
@@ -156,7 +156,7 @@ def main() -> None:
     axo.set_ylim(0.47, 0.685)
     axo.set_yticks([0.50, 0.55, 0.60, 0.65])
     axo.set_xticks(list(xs) + [xfull], [""] * (KMAX + 1))
-    axo.set_ylabel("AUC, does the\npair respond", fontsize=6.4, color=INK,
+    axo.set_ylabel("AUC (response\nprediction)", fontsize=6.4, color=INK,
                    labelpad=1.5, linespacing=1.35)
 
     axm.set_ylim(-0.10, 0.26)
