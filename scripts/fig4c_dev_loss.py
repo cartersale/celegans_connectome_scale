@@ -7,7 +7,7 @@ the full-resolution operator on the same graph (0 preserves the operator's
 ordering exactly). The random arm has identical k and cell-size profile.
 
 Loss depends on synapse density, which grows across the series, so the series is
-drawn twice: dashed lines are raw; solid lines with +-1 sd bands are after
+drawn twice: dashed lines are unthinned; solid lines with +-1 sd bands are after
 multinomial thinning to a common budget (BUDGET = 1,200 synapses, THIN_REPS = 10
 in dev_sufficiency.py). The annotation is the Spearman correlation of the
 thinned bio-random gap (s_gap) with dataset index.
@@ -54,20 +54,16 @@ def main() -> None:
     fig.subplots_adjust(left=0.17, right=0.99, top=0.88, bottom=0.20)
 
     for arm, col, lab in ((("s_rand", "s_rand_sd"), RAND, "size-matched random"),
-                          (("s_bio", "s_bio_sd"), BIO, "biological classes")):
+                          (("s_bio", "s_bio_sd"), BIO, "cell classes")):
         m, sd = thin[arm[0]].to_numpy(), thin[arm[1]].to_numpy()
         ax.fill_between(x, m - sd, m + sd, color=col, alpha=0.18, lw=0)
         ax.plot(x, m, color=col, lw=1.3, marker="o", ms=3.0, mew=0, label=lab, zorder=3)
         ax.plot(x, raw[arm[0]].to_numpy(), color=col, lw=0.8, dashes=(2.5, 2),
                 alpha=0.55, zorder=2)
 
-    k = 4
-    ax.annotate("", xy=(k, thin.s_bio.iloc[k]), xytext=(k, thin.s_rand.iloc[k]),
-                arrowprops=dict(arrowstyle="<->", lw=0.6, color=fs.INK, shrinkA=0, shrinkB=0))
-    ax.text(k + 0.18, (thin.s_bio.iloc[k] + thin.s_rand.iloc[k]) / 2,
-            f"gap does not widen\nρ = {rho:+.2f}, p = {p:.2f}", fontsize=FS - 1.0,
-            color=fs.INK, ha="left", va="center")
-    ax.text(len(x) - 1.1, raw.s_bio.iloc[-1] - 0.028, "raw (density-confounded)",
+    ax.text(len(x) - 1, 0.55, f"ρ = {rho:+.2f}, p = {p:.2f}", fontsize=FS - 1.0,
+            color=fs.INK, ha="right", va="center")
+    ax.text(len(x) - 1.1, raw.s_bio.iloc[-1] - 0.028, "unthinned",
             fontsize=FS - 1.5, color=fs.GREY, style="italic", ha="right", va="top")
 
     fs.style(ax)
@@ -76,7 +72,7 @@ def main() -> None:
                        fontsize=FS - 1.5)
     ax.set_xlim(-0.4, len(x) - 0.6)
     ax.set_ylim(0, 0.76)
-    ax.set_ylabel("structural loss of the quotient", fontsize=FS)
+    ax.set_ylabel("structural loss", fontsize=FS)
     ax.set_xlabel("dataset  (stage, synapses)", fontsize=FS, labelpad=1.0)
     ax.text(0.0, 1.055, "thinned to 1,200 synapses, 10 replicates ± 1 sd",
             transform=ax.transAxes, fontsize=FS - 1.0, color=fs.GREY)

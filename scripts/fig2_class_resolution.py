@@ -19,7 +19,8 @@ Bottom row, from saved sweeps:
 
 d  propagation effect retained along the matched class and random merge
    trajectories, 302 -> 119, as % of the headroom (mean and 2.5-97.5 percentile band)
-e  at k = 119, operator-structure loss and propagation-prediction loss per arm
+e  at k = 119, structural loss (1 - Spearman with the full operator, observed pairs) and
+   predictive loss (fraction of the full operator's AUC above 0.5, unsynapsed pairs) per arm
 f  at k = 119, loss for propagation and for activity correlation per arm
 
 Operator: (I - alpha*A/rho)^-1 - I with alpha = 0.1 (randi.resolvent). The
@@ -236,30 +237,30 @@ def panel_d(ax, bm, headroom):
 
 
 def panel_e(ax, bm, headroom):
-    """At k = 119: what each arm costs in operator structure, and in prediction."""
+    """At k = 119: structural loss and predictive loss per arm, both on a 0-1 scale."""
     end = bm[bm.k == 119]
     vals, errs = {}, {}
     for mode in ("bio", "random"):
         d = end[end["mode"] == mode]
-        vals[mode] = [100 * d.loss_struct_occ.mean(), 100 * d.loss_auc_nosyn.mean() / headroom]
-        errs[mode] = [100 * d.loss_struct_occ.std(), 100 * d.loss_auc_nosyn.std() / headroom]
+        vals[mode] = [d.loss_struct_occ.mean(), d.loss_auc_nosyn.mean() / headroom]
+        errs[mode] = [d.loss_struct_occ.std(), d.loss_auc_nosyn.std() / headroom]
     x = np.arange(2)
     for k, (mode, c) in enumerate((("bio", BIO), ("random", RND))):
         xx = x + (k - 0.5) * 0.36
         ax.bar(xx, vals[mode], 0.33, color=c, lw=0, zorder=2)
         ax.errorbar(xx, vals[mode], yerr=errs[mode], fmt="none", ecolor=fs.INK,
                     elinewidth=0.6, capsize=1.6, capthick=0.6, zorder=3)
-        for xi, v in zip(xx, vals[mode]):
-            ax.text(xi, v + (4 if v >= 0 else -4), f"{v:.0f}", fontsize=FS, color=c,
+        for xi, v, e in zip(xx, vals[mode], errs[mode]):
+            ax.text(xi, v + (e + 0.03 if v >= 0 else -e - 0.03), f"{v:.2f}", fontsize=FS, color=c,
                     ha="center", va="bottom" if v >= 0 else "top", weight="bold")
     ax.axhline(0, color=fs.INK, lw=0.5)
-    for yy, lbl, c in ((110, "Classes", BIO), (98, "Random merges", RND)):
+    for yy, lbl, c in ((1.10, "Classes", BIO), (0.98, "Size-matched random", RND)):
         ax.text(-0.42, yy, lbl, color=c, fontsize=FS, weight="bold", va="center")
     ax.set_xticks(x)
-    ax.set_xticklabels(["Operator\nstructure", "Propagation\nprediction"], fontsize=FS)
-    ax.set_ylim(-16, 116)
-    ax.set_yticks([0, 50, 100])
-    ax.set_ylabel("Lost at k = 119 (%)", fontsize=FS)
+    ax.set_xticklabels(["Structural\nloss", "Predictive\nloss"], fontsize=FS)
+    ax.set_ylim(-0.16, 1.16)
+    ax.set_yticks([0, 0.5, 1])
+    ax.set_ylabel("Loss at k = 119", fontsize=FS)
     ax.set_xlim(-0.55, 1.55)
     fs.style(ax)
     ax.tick_params(axis="x", length=0)
@@ -370,9 +371,9 @@ def main() -> None:
     print(f"full operator AUC above chance on no-synapse pairs: {headroom:.4f}")
     end = bm[bm.k == 119].groupby("mode")["loss_auc_nosyn"].mean() / headroom
     lost_bio, lost_rnd = max(0.0, 100 * end["bio"]), 100 * end["random"]
-    st = 100 * bm[bm.k == 119].groupby("mode")["loss_struct_occ"].mean()
+    st = bm[bm.k == 119].groupby("mode")["loss_struct_occ"].mean()
     print(f"k=119  effect lost: classes {lost_bio:.0f}%, random {lost_rnd:.0f}%; "
-          f"operator structure lost: classes {st['bio']:.0f}%, random {st['random']:.0f}%")
+          f"structural loss: classes {st['bio']:.3f}, random {st['random']:.3f}")
 
     fig = plt.figure(figsize=(7.1, 5.35))
     gs_top = fig.add_gridspec(1, 3, left=0.005, right=0.995, top=0.995,

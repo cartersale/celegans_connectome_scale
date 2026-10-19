@@ -1,11 +1,11 @@
-"""Compare walk-operator scores of responding and non-responding pairs with no direct synapse.
+"""Compare path-operator scores of responding and non-responding pairs with no direct synapse.
 
 Both subpanels use observed ordered pairs (occ3 > 0) with A[pre, post] = 0,
-label = response released; walk operator = resolvent at alpha = 0.1.
+label = response released; path operator = resolvent at alpha = 0.1.
 
-  fig1d_nosynapse_violin  log10 operator score by group, with IQR and median, the
+  fig1d_nosynapse_violin  log10 operator score by group, with IQR and median; the
                      ratio of group medians and a one-sided Mann-Whitney U
-                     (responders greater). Values are floored at FLOOR before
+                     (responders greater) are printed. Values are floored at FLOOR before
                      the log, since pairs with no path return a numerical zero.
 
   fig1_nosynapse_roc     ROC and AUC, with a 95% percentile interval from a cluster
@@ -49,16 +49,10 @@ plt.rcParams.update({
 })
 
 INK, GREY, FAINT = "#22282d", "#8b9196", "#c9ced2"
-YES, NO, WALK = "#d1332e", "#8b9196", "#2a5fd6"
+YES, NO, PATH = "#d1332e", "#8b9196", "#2a5fd6"
 ALPHA = 0.1
 FLOOR = 1e-19          # the operator's numerical zero, kept on the axis
 BOOT = 2000
-
-
-def sci(x: float) -> str:
-    """Format a p-value as mathtext m x 10^e (mantissa rounded to an integer)."""
-    e = int(np.floor(np.log10(x)))
-    return f"{x / 10 ** e:.0f} \\times 10^{{{e}}}"
 
 
 def style(ax) -> None:
@@ -111,8 +105,8 @@ def main() -> None:
     # ------------------------------------------------------------------ violin
     fig = plt.figure(figsize=(2.35, 2.05))
     ax = fig.add_axes([0.26, 0.235, 0.70, 0.665])
-    groups = ((lv[y == 1], YES, "functionally\nconnected"),
-              (lv[y == 0], NO, "not\nconnected"))
+    groups = ((lv[y == 1], YES, "response"),
+              (lv[y == 0], NO, "no response"))
     # n goes into the tick label so it cannot collide with the violin tails
     ticklabels = [f"{lbl}\nn = {g.size:,}" for g, _, lbl in groups]
 
@@ -134,11 +128,11 @@ def main() -> None:
     ax.set_xticks([0, 1], ticklabels)
     ax.set_yticks([-15, -12, -9, -6, -3],
                   ["$10^{-15}$", "$10^{-12}$", "$10^{-9}$", "$10^{-6}$", "$10^{-3}$"])
-    ax.set_ylabel(f"Walk operator ($\\alpha$ = {ALPHA})", fontsize=6.4, color=WALK,
+    ax.set_ylabel(f"Path operator ($\\alpha$ = {ALPHA})", fontsize=6.4, color=PATH,
                   labelpad=1.5)
     style(ax)
-    ax.spines["left"].set_color(WALK)
-    ax.tick_params(axis="y", colors=WALK)
+    ax.spines["left"].set_color(PATH)
+    ax.tick_params(axis="y", colors=PATH)
     # after style(), which would otherwise repaint every tick label INK
     ax.tick_params(axis="x", length=0, pad=2.5)
     for lbl, (_, col, _) in zip(ax.get_xticklabels(), groups):
@@ -146,15 +140,6 @@ def main() -> None:
         lbl.set_fontsize(6.2)
         lbl.set_linespacing(1.3)
 
-    # the comparison, drawn once
-    top = -3.05
-    ax.plot([0, 0, 1, 1], [top - 0.45, top, top, top - 0.45], color=INK, lw=0.7,
-            clip_on=False)
-    ax.text(0.5, top + 0.25, f"{med[0] / med[1]:.1f}$\\times$ higher median, "
-                             f"$p = {sci(mw.pvalue)}$",
-            fontsize=6.0, color=INK, ha="center", va="bottom")
-    ax.text(0.02, 0.02, "no-synapse pairs only", transform=ax.transAxes,
-            fontsize=5.8, color=GREY, ha="left", va="bottom", style="italic")
     save(fig, "fig1d_nosynapse_violin")
 
     # --------------------------------------------------------------------- ROC
@@ -163,7 +148,7 @@ def main() -> None:
     ax.plot([0, 1], [0, 1], ls=(0, (3.4, 2.4)), color=GREY, lw=0.9, zorder=2)
     fpr, tpr, _ = roc_curve(y, v)
     k = np.unique(np.linspace(0, len(fpr) - 1, min(600, len(fpr))).astype(int))
-    ax.plot(fpr[k], tpr[k], color=WALK, lw=1.5, zorder=4, solid_joinstyle="round")
+    ax.plot(fpr[k], tpr[k], color=PATH, lw=1.5, zorder=4, solid_joinstyle="round")
 
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
@@ -174,16 +159,16 @@ def main() -> None:
     ax.set_ylabel("True positive rate", fontsize=6.4, color=INK, labelpad=1.5)
     style(ax)
 
-    ax.plot([0.40, 0.52], [0.315, 0.315], color=WALK, lw=1.5,
+    ax.plot([0.40, 0.52], [0.315, 0.315], color=PATH, lw=1.5,
             transform=ax.transAxes, clip_on=False)
-    ax.text(0.555, 0.315, f"Walk operator\n(AUC = {auc:.3f})", transform=ax.transAxes,
-            fontsize=6.2, color=WALK, ha="left", va="center", linespacing=1.25)
+    ax.text(0.555, 0.315, f"Path operator\n(AUC = {auc:.3f})", transform=ax.transAxes,
+            fontsize=6.2, color=PATH, ha="left", va="center", linespacing=1.25)
     ax.plot([0.40, 0.52], [0.145, 0.145], color=GREY, lw=0.9, ls=(0, (3.4, 2.4)),
             transform=ax.transAxes, clip_on=False)
     ax.text(0.555, 0.145, "Chance\n(AUC = 0.500)", transform=ax.transAxes,
             fontsize=6.2, color=GREY, ha="left", va="center", linespacing=1.25)
     ax.text(0.02, 0.98, f"{len(y):,} pairs, no direct synapse\n"
-                        f"{int(y.sum()):,} functionally connected\n"
+                        f"{int(y.sum()):,} with a response\n"
                         f"95% CI [{lo:.3f}, {hi:.3f}], {uq.size} classes",
             transform=ax.transAxes, fontsize=5.9, color=GREY, ha="left", va="top",
             linespacing=1.35)
