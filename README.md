@@ -130,6 +130,7 @@ Other analyses reported in the main text:
 | developmental analyses without the five glia | `dev_sufficiency --exclude-glia`, `cross_animal_transfer --exclude-glia` |
 | structural transfer at other merge counts | `cross_animal_transfer --n-merge {10,20,35}` |
 | grouping methods | `grouping_methods` |
+| structural loss of the grouping methods, k = 20 to 2 (`figures/supp/structure_vs_resolution.svg`) | `grouping_methods_structural` |
 | Dvali et al. communities | `dvali_communities` |
 
 ## Diagnostics
