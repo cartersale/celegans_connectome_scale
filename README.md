@@ -1,7 +1,7 @@
-# connectome_resolutions
+# Connectome Resolutions
 
 Code for "Connectome structure constrains neural activity across
-scales". 
+scales/The Functional Resolution of a Connectome". 
 
 The path operator R = (I - αA/ρ)⁻¹ - I (α = 0.1) on the *C. elegans* connectome
 is scored against measured signal propagation (Randi et al. 2023), activity
